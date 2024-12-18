@@ -6,4 +6,4 @@ node_modules
 Client\node_modules
 Server\uploads
 Server\uploads
-Server/uploads/*
+/Server/uploads/*
