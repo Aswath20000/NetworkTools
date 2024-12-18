@@ -1,0 +1,161 @@
+/* Global Styles */
+body {
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #e8f5e9, #ffffff);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #2e7d32;
+}
+
+.App {
+  width: 90%;
+  max-width: 1200px;
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+}
+
+/* Headings */
+h1 {
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: #1b5e20;
+}
+
+h2 {
+  font-size: 1.8em;
+  margin-bottom: 15px;
+  color: #388e3c;
+}
+
+h3 {
+  font-size: 1.2em;
+  margin: 20px 0 10px;
+  color: #2e7d32;
+  border-bottom: 2px solid #66bb6a;
+  display: inline-block;
+  padding-bottom: 5px;
+}
+
+/* Card Styles */
+.card {
+  background: linear-gradient(145deg, #ffffff, #e8f5e9);
+  border-radius: 12px;
+  box-shadow: 0 8px 15px rgba(0, 128, 0, 0.2);
+  margin: 20px auto;
+  padding: 25px;
+  max-width: 500px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 128, 0, 0.3);
+}
+
+.card h2 {
+  color: #1b5e20;
+  margin-bottom: 20px;
+}
+
+/* Input Fields */
+.card input,
+.card button {
+  width: calc(100% - 20px);
+  margin: 10px auto 15px;
+  padding: 12px;
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  outline: none;
+  font-size: 16px;
+  display: block;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card input:focus {
+  border-color: #66bb6a;
+  box-shadow: 0 0 8px rgba(102, 187, 106, 0.5);
+}
+
+/* Buttons */
+.card button {
+  background-color: #66bb6a;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card button:hover {
+  background-color: #43a047;
+  box-shadow: 0 5px 10px rgba(67, 160, 71, 0.3);
+}
+
+.card button:disabled {
+  background-color: #bdbdbd;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Lists */
+.card ul {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.card ul li {
+  background: #e8f5e9;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 5px 0;
+  font-size: 15px;
+  color: #388e3c;
+  box-shadow: 0 2px 4px rgba(0, 128, 0, 0.1);
+}
+
+.card ul li strong {
+  color: #1b5e20;
+}
+
+/* Preformatted Text */
+.card pre {
+  background: #f1f8e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+/* File Upload */
+.card input[type="file"] {
+  padding: 5px;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card {
+      padding: 20px;
+  }
+
+  h1 {
+      font-size: 2em;
+  }
+
+  h2 {
+      font-size: 1.5em;
+  }
+}
