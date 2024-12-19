@@ -30,21 +30,10 @@ function App() {
 
     // Socket.IO setup for real-time updates
     useEffect(() => {
-        // Port Scan updates
-        socket.on('port-scan-progress', (data) => {
-            setPortScanProgress(data.progress);
-        });
-        socket.on('port-scan-completed', (ports) => {
-            setPortScanResult(ports);
-        });
-
-        // Network Scan updates
-        socket.on('network-scan-progress', (data) => {
-            setNetworkScanProgress(data.progress);
-        });
-        socket.on('network-scan-completed', (devices) => {
-            setActiveDevices(devices);
-        });
+        socket.on('port-scan-progress', (data) => setPortScanProgress(data.progress));
+        socket.on('port-scan-completed', (ports) => setPortScanResult(ports));
+        socket.on('network-scan-progress', (data) => setNetworkScanProgress(data.progress));
+        socket.on('network-scan-completed', (devices) => setActiveDevices(devices));
 
         return () => {
             socket.off('port-scan-progress');
@@ -54,7 +43,7 @@ function App() {
         };
     }, []);
 
-    // Handle Ping
+    // Ping Functions
     const handlePing = async () => {
         try {
             const response = await axios.post('http://localhost:5000/ping', { ipAddress });
@@ -64,7 +53,17 @@ function App() {
         }
     };
 
-    // Handle Port Scan
+    const clearPingResults = async () => {
+        try {
+            await axios.delete('http://localhost:5000/clear-ping');
+            setPingResult(null);
+            alert('Ping results cleared.');
+        } catch (error) {
+            alert('Error clearing ping results: ' + error.message);
+        }
+    };
+
+    // Port Scan Functions
     const handlePortScan = async () => {
         try {
             setPortScanProgress(0);
@@ -75,7 +74,18 @@ function App() {
         }
     };
 
-    // Handle Network Scan
+    const clearPortScanResults = async () => {
+        try {
+            await axios.delete('http://localhost:5000/clear-port-scan');
+            setPortScanResult([]);
+            setPortScanProgress(0);
+            alert('Port scan results cleared.');
+        } catch (error) {
+            alert('Error clearing port scan results: ' + error.message);
+        }
+    };
+
+    // Network Scan Functions
     const handleNetworkScan = async () => {
         try {
             setNetworkScanProgress(0);
@@ -86,12 +96,23 @@ function App() {
         }
     };
 
-    // Handle File Upload
+    const clearNetworkScanResults = async () => {
+        try {
+            await axios.delete('http://localhost:5000/clear-network-scan');
+            setActiveDevices([]);
+            setNetworkScanProgress(0);
+            alert('Network scan results cleared.');
+        } catch (error) {
+            alert('Error clearing network scan results: ' + error.message);
+        }
+    };
+
     const handleFileUpload = async () => {
         if (!file) return alert('Please select a file first.');
+    
         const formData = new FormData();
         formData.append('file', file);
-
+    
         try {
             const response = await axios.post('http://localhost:5000/scan-file', formData, {
                 onUploadProgress: (progressEvent) => {
@@ -99,15 +120,29 @@ function App() {
                         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                         setFileUploadProgress(progress);
                     }
-                }
+                },
             });
             setFileScanResult(response.data);
+            alert('Scan completed successfully.');
         } catch (error) {
-            alert('Error scanning file: ' + error.response?.data?.error);
+            alert('Error scanning file: ' + (error.response?.data?.error || error.message));
         }
     };
+    
+    // Clear Malware Scan Results
+    const clearFileScanResults = async () => {
+        try {
+            await axios.delete('http://localhost:5000/clear-malware-scan');
+            setFileScanResult(null);
+            setFileUploadProgress(0);
+            alert('File scan results cleared.');
+        } catch (error) {
+            alert('Error clearing file scan results: ' + error.message);
+        }
+    };
+    
 
-    // Schedule Port Scan
+    // Scheduled Port Scan Functions
     const handleSchedulePortScan = async () => {
         try {
             if (interval <= 0) {
@@ -119,15 +154,19 @@ function App() {
                 return;
             }
 
-            await axios.post('http://localhost:5000/schedule-port-scan', {
-                ipAddress,
-                interval,
-                portRange,
-            });
-
+            await axios.post('http://localhost:5000/schedule-port-scan', { ipAddress, interval, portRange });
             alert(`Port scan scheduled for ${ipAddress} every ${interval} minute(s) for ports ${portRange.start}-${portRange.end}.`);
         } catch (error) {
             alert('Error scheduling port scan: ' + error.response?.data?.error);
+        }
+    };
+
+    const clearScheduledScanResults = async () => {
+        try {
+            await axios.delete('http://localhost:5000/clear-scheduled-scan');
+            alert('Scheduled scan results cleared.');
+        } catch (error) {
+            alert('Error clearing scheduled scan results: ' + error.message);
         }
     };
 
@@ -138,13 +177,9 @@ function App() {
             {/* Ping Functionality */}
             <div className="card">
                 <h2>Ping</h2>
-                <input
-                    type="text"
-                    value={ipAddress}
-                    onChange={(e) => setIpAddress(e.target.value)}
-                    placeholder="Enter IP Address"
-                />
+                <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
                 <button onClick={handlePing}>Ping</button>
+                <button onClick={clearPingResults}>Clear Results</button>
                 {pingResult && <pre>{JSON.stringify(pingResult, null, 2)}</pre>}
             </div>
 
@@ -164,68 +199,52 @@ function App() {
                     placeholder="End Port"
                 />
                 <button onClick={handlePortScan}>Start Scan</button>
-                <h3>Progress:</h3>
+                <button onClick={clearPortScanResults}>Clear Results</button>
                 <progress value={portScanProgress} max="100" />
-                <h3>Open Ports:</h3>
                 <ul>
-                    {portScanResult.map((port, index) => (
-                        <li key={index}>Port {port} is open</li>
-                    ))}
+                    {portScanResult.map((port, index) => <li key={index}>Port {port} is open</li>)}
                 </ul>
             </div>
 
             {/* Network Scan Functionality */}
             <div className="card">
                 <h2>Network Scan</h2>
-                <input
-                    type="text"
-                    value={subnet}
-                    onChange={(e) => setSubnet(e.target.value)}
-                    placeholder="Enter Subnet (e.g., 192.168.1.)"
-                />
-                <button onClick={handleNetworkScan}>Start Network Scan</button>
-                <h3>Progress:</h3>
+                <input type="text" value={subnet} onChange={(e) => setSubnet(e.target.value)} placeholder="Enter Subnet (e.g., 192.168.1.)" />
+                <button onClick={handleNetworkScan}>Start Scan</button>
+                <button onClick={clearNetworkScanResults}>Clear Results</button>
                 <progress value={networkScanProgress} max="100" />
-                <h3>Active Devices:</h3>
                 <ul>
-                    {activeDevices.map((device, index) => (
-                        <li key={index}>{device}</li>
-                    ))}
+                    {activeDevices.map((device, index) => <li key={index}>{device}</li>)}
                 </ul>
             </div>
 
-            {/* Malware Scan Upload */}
             <div className="card">
-                <h2>Upload File for Malware Scan</h2>
-                <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-                <button onClick={handleFileUpload}>Upload and Scan</button>
-                <h3>Progress:</h3>
-                <progress value={fileUploadProgress} max="100" />
-                {fileScanResult && (
-                    <div>
-                        <h3>{fileScanResult.message}</h3>
-                        {fileScanResult.details.length > 0 && (
-                            <ul>
-                                {fileScanResult.details.map((item, index) => (
-                                    <li key={index}>
-                                        <strong>{item.engine}</strong>: {item.verdict} - {item.description}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                )}
-            </div>
+    <h2>Malware Scan</h2>
+    <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+    <button onClick={handleFileUpload}>Upload and Scan</button>
+    <button onClick={clearFileScanResults}>Clear Results</button>
+    <h3>Progress:</h3>
+    <progress value={fileUploadProgress} max="100" />
+    {fileScanResult && (
+        <div>
+            <h3>{fileScanResult.message}</h3>
+            {fileScanResult.details.length > 0 && (
+                <ul>
+                    {fileScanResult.details.map((item, index) => (
+                        <li key={index}>
+                            <strong>{item.engine}</strong>: {item.verdict} - {item.description}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    )}
+</div>;
 
-            
+            {/* Scheduled Port Scan */}
             <div className="card">
-                <h2>Schedule Port Scan</h2>
-                <input
-                    type="text"
-                    value={ipAddress}
-                    onChange={(e) => setIpAddress(e.target.value)}
-                    placeholder="Enter IP Address"
-                />
+                <h2>Scheduled Port Scan</h2>
+                <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
                 <input
                     type="number"
                     value={portRange.start}
@@ -245,6 +264,7 @@ function App() {
                     placeholder="Interval in minutes"
                 />
                 <button onClick={handleSchedulePortScan}>Schedule Scan</button>
+                <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
             </div>
         </div>
     );

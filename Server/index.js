@@ -60,7 +60,7 @@ const MalwareScan = mongoose.model('MalwareScan', new mongoose.Schema({
 const ScheduledScan = mongoose.model('ScheduledScan', new mongoose.Schema({
     ipAddress: { type: String, required: true },
     portRange: { start: Number, end: Number },
-    interval: { type: Number, required: true }, // Interval in minutes
+    interval: { type: Number, required: true },
     lastExecuted: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now },
     scanHistory: [
@@ -70,8 +70,6 @@ const ScheduledScan = mongoose.model('ScheduledScan', new mongoose.Schema({
         },
     ],
 }));
-
-
 
 // Multer for File Uploads
 const upload = multer({
@@ -161,7 +159,6 @@ app.post('/schedule-port-scan', async (req, res) => {
     }
 
     try {
-        // Save scheduled scan details in the database
         const scheduledScan = new ScheduledScan({
             ipAddress,
             portRange,
@@ -170,33 +167,23 @@ app.post('/schedule-port-scan', async (req, res) => {
         });
         await scheduledScan.save();
 
-        const cronSchedule = `*/${interval} * * * *`; // Run every 'interval' minutes
+        const cronSchedule = `*/${interval} * * * *`;
         cron.schedule(cronSchedule, async () => {
-            console.log(`Scheduled port scan for ${ipAddress} started.`);
             try {
                 const openPorts = await portScan(ipAddress, portRange);
-
-                // Add scan results to scanHistory
-                const scanData = {
-                    timestamp: new Date(),
-                    openPorts,
-                };
+                const scanData = { timestamp: new Date(), openPorts };
                 await ScheduledScan.findByIdAndUpdate(scheduledScan._id, {
                     lastExecuted: new Date(),
                     $push: { scanHistory: scanData },
                 });
-
-                console.log(`Scheduled port scan for ${ipAddress} completed. Open ports: ${openPorts}`);
-
-                // Emit scan results to the frontend
                 io.emit('scheduled-port-scan-result', { ipAddress, scanData });
             } catch (err) {
-                console.error(`Error in scheduled port scan for ${ipAddress}:`, err);
+                console.error(`Error in scheduled port scan:`, err);
             }
         });
 
         res.json({
-            message: `Port scan scheduled for ${ipAddress} every ${interval} minute(s) for ports ${portRange.start}-${portRange.end}.`,
+            message: `Port scan scheduled for ${ipAddress} every ${interval} minute(s).`,
             scheduleId: scheduledScan._id,
         });
     } catch (err) {
@@ -204,11 +191,10 @@ app.post('/schedule-port-scan', async (req, res) => {
     }
 });
 
-
-
+// 4. File Upload and VirusTotal Scan
 // 4. File Upload and VirusTotal Scan
 app.post('/scan-file', upload.single('file'), async (req, res) => {
-    const apiKey = process.env.VIRUSTOTAL_API_KEY;
+    const apiKey = process.env.VIRUSTOTAL_API_KEY; // Ensure your API key is set in .env
 
     if (!apiKey) {
         return res.status(500).json({ error: 'VirusTotal API key is not configured.' });
@@ -222,10 +208,12 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
         const filePath = req.file.path;
         const fileSize = fs.statSync(filePath).size;
 
+        // Check VirusTotal file size limit (32MB)
         if (fileSize > 32 * 1024 * 1024) {
-            return res.status(400).json({ error: 'File exceeds VirusTotal size limit.' });
+            return res.status(400).json({ error: 'File exceeds VirusTotal size limit (32MB).' });
         }
 
+        // Upload file to VirusTotal
         const formData = new FormData();
         formData.append('file', fs.createReadStream(filePath));
         const headers = {
@@ -236,8 +224,9 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
         const uploadResponse = await axios.post('https://www.virustotal.com/api/v3/files', formData, { headers });
         const fileId = uploadResponse.data.data.id;
 
+        // Poll VirusTotal API for scan results
         let retries = 10;
-        const delay = 15000;
+        const delay = 15000; // 15 seconds between retries
         let reportResponse;
 
         while (retries > 0) {
@@ -248,7 +237,7 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
             const status = reportResponse?.data?.data?.attributes?.status;
             if (status === 'completed') break;
 
-            await new Promise((resolve) => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay)); // Wait before retrying
             retries--;
         }
 
@@ -256,65 +245,83 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
             return res.status(500).json({ error: 'Failed to retrieve scan results.' });
         }
 
+        // Parse VirusTotal results
         const scanResults = reportResponse.data.data.attributes.results || {};
-        const maliciousDetails = Object.entries(scanResults).filter(
-            ([engine, result]) => result?.category === 'malicious'
-        );
+        const maliciousDetails = Object.entries(scanResults)
+            .filter(([engine, result]) => result?.category === 'malicious')
+            .map(([engine, result]) => ({
+                engine,
+                verdict: result?.category,
+                description: result?.result,
+            }));
 
+        // Clean up uploaded file
         fs.unlinkSync(filePath);
 
+        // Save results to MongoDB
         const result = new MalwareScan({
             fileName: req.file.originalname,
             result: {
                 message: maliciousDetails.length > 0 ? 'Malware detected' : 'No malware detected',
-                details: maliciousDetails.map(([engine, result]) => ({
-                    engine,
-                    verdict: result?.category,
-                    description: result?.result,
-                })),
+                details: maliciousDetails,
             },
         });
         await result.save();
 
+        // Send response to the client
         res.json(result.result);
     } catch (error) {
         res.status(500).json({ error: 'Error during VirusTotal scan', details: error.message });
     }
 });
 
+
 // 5. Network Scan
 app.post('/scan-network', async (req, res) => {
     const { subnet } = req.body;
 
-    if (!subnet) {
-        return res.status(400).json({ error: 'Subnet is required (e.g., 192.168.1.)' });
-    }
-
-    const totalIPs = 20;
-    let scannedIPs = 0;
-    const activeDevices = [];
-
     try {
-        for (let i = 1; i <= totalIPs; i++) {
+        const activeDevices = [];
+        for (let i = 1; i <= 20; i++) {
             const ipAddress = `${subnet}${i}`;
             const result = await ping.promise.probe(ipAddress, { timeout: 1 });
-
-            if (result.alive) {
-                activeDevices.push(ipAddress);
-            }
-
-            scannedIPs++;
-            const progress = Math.round((scannedIPs / totalIPs) * 100);
-            io.emit('network-scan-progress', { progress });
+            if (result.alive) activeDevices.push(ipAddress);
+            io.emit('network-scan-progress', { progress: Math.round((i / 20) * 100) });
         }
 
         const networkScanResult = new NetworkScan({ subnet, activeDevices });
         await networkScanResult.save();
         io.emit('network-scan-completed', activeDevices);
-        res.json({ subnet, activeDevices });
+        res.json(networkScanResult);
     } catch (err) {
         res.status(500).json({ error: 'Network scan failed', details: err.message });
     }
+});
+
+// Clear Data Endpoints
+app.delete('/clear-ping', async (req, res) => {
+    await PingResult.deleteMany({});
+    res.json({ message: 'All Ping results cleared' });
+});
+
+app.delete('/clear-port-scan', async (req, res) => {
+    await PortScan.deleteMany({});
+    res.json({ message: 'All Port Scan results cleared' });
+});
+
+app.delete('/clear-network-scan', async (req, res) => {
+    await NetworkScan.deleteMany({});
+    res.json({ message: 'All Network Scan results cleared' });
+});
+
+app.delete('/clear-malware-scan', async (req, res) => {
+    await MalwareScan.deleteMany({});
+    res.json({ message: 'All Malware Scan results cleared' });
+});
+
+app.delete('/clear-scheduled-scan', async (req, res) => {
+    await ScheduledScan.deleteMany({});
+    res.json({ message: 'All Scheduled Scans cleared' });
 });
 
 // Real-time connection
