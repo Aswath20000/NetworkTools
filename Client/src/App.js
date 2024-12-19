@@ -29,6 +29,7 @@ function App() {
     const [malwareResults, setMalwareResults] = useState([]);
     const [scheduledScanSearchTerm, setScheduledScanSearchTerm] = useState('');
     const [scheduledScanResults, setScheduledScanResults] = useState([]);
+    const [scheduleId, setScheduleId] = useState(null);
 
     const handlePingSearch = async () => {
         try {
@@ -97,13 +98,13 @@ function App() {
             setActiveDevices(devices);
         });
     
-        // Handle socket errors
+        
         socket.on('connect_error', (error) => {
             console.error('Socket connection error:', error);
             alert('Socket connection error. Please try again.');
         });
     
-        // Clean up socket listeners on unmount
+        
         return () => {
             socket.off('port-scan-progress');
             socket.off('port-scan-completed');
@@ -241,13 +242,35 @@ function App() {
                 alert('Please enter a valid port range.');
                 return;
             }
-
-            await axios.post('http://localhost:5000/schedule-port-scan', { ipAddress, interval, portRange });
+    
+            
+            const response = await axios.post('http://localhost:5000/schedule-port-scan', { ipAddress, interval, portRange });
+    
             console.log(`Port scan scheduled for ${ipAddress} every ${interval} minute(s).`);
             alert(`Port scan scheduled for ${ipAddress} every ${interval} minute(s).`);
+    
+            
+            setScheduleId(response.data.scheduleId);
         } catch (error) {
             console.error('Error scheduling port scan:', error.response?.data?.error || error.message);
             alert('Error scheduling port scan.');
+        }
+    };
+    const handleStopScheduledPortScan = async () => {
+        console.log('Stopping scheduled port scan...');
+        try {
+            if (!scheduleId) {
+                alert('Schedule ID is required to stop the scan.');
+                return;
+            }
+    
+            
+            const response = await axios.post('http://localhost:5000/stop-scheduled-port-scan', { scheduleId });
+            console.log(response.data.message); 
+            alert(`Port scan with schedule ID ${scheduleId} stopped.`);
+        } catch (error) {
+            console.error('Error stopping port scan:', error.response?.data?.error || error.message);
+            alert('Error stopping port scan.');
         }
     };
 
@@ -354,29 +377,37 @@ function App() {
 
             
             <div className="card">
-                <h2>Scheduled Port Scan</h2>
-                <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
-                <input
-                    type="number"
-                    value={portRange.start}
-                    onChange={(e) => setPortRange({ ...portRange, start: parseInt(e.target.value) })}
-                    placeholder="Start Port"
-                />
-                <input
-                    type="number"
-                    value={portRange.end}
-                    onChange={(e) => setPortRange({ ...portRange, end: parseInt(e.target.value) })}
-                    placeholder="End Port"
-                />
-                <input
-                    type="number"
-                    value={interval}
-                    onChange={(e) => setInterval(parseInt(e.target.value))}
-                    placeholder="Interval in minutes"
-                />
-                <button onClick={handleSchedulePortScan}>Schedule Scan</button>
-                <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
-            </div></div>
+    <h2>Scheduled Port Scan</h2>
+    <input
+        type="text"
+        value={ipAddress}
+        onChange={(e) => setIpAddress(e.target.value)}
+        placeholder="Enter IP Address"
+    />
+    <input
+        type="number"
+        value={portRange.start}
+        onChange={(e) => setPortRange({ ...portRange, start: parseInt(e.target.value) })}
+        placeholder="Start Port"
+    />
+    <input
+        type="number"
+        value={portRange.end}
+        onChange={(e) => setPortRange({ ...portRange, end: parseInt(e.target.value) })}
+        placeholder="End Port"
+    />
+    <input
+        type="number"
+        value={interval}
+        onChange={(e) => setInterval(parseInt(e.target.value))}
+        placeholder="Interval in minutes"
+    />
+    <button onClick={handleSchedulePortScan}>Schedule Scan</button>
+    <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
+
+    
+    <button onClick={handleStopScheduledPortScan}>Stop Scan</button>
+</div></div>
 
             <h1>History</h1>
 <div className='card-cont'>
@@ -532,7 +563,7 @@ function App() {
                     <tr key={index}>
                         <td>{result.ipAddress}</td>
                         <td>
-                            {/* Display only openPorts from scanHistory */}
+                        
                             {result.scanHistory && result.scanHistory.length > 0 ? (
                                 result.scanHistory.map((scan, scanIndex) => (
                                     <span key={scanIndex}>

@@ -148,6 +148,9 @@ app.post('/scan-ports', async (req, res) => {
     }
 });
 
+let scheduledScans = {}; 
+
+
 app.post('/schedule-port-scan', async (req, res) => {
     const { ipAddress, interval, portRange } = req.body;
 
@@ -165,7 +168,7 @@ app.post('/schedule-port-scan', async (req, res) => {
         await scheduledScan.save();
 
         const cronSchedule = `*/${interval} * * * *`;
-        cron.schedule(cronSchedule, async () => {
+        const cronJob = cron.schedule(cronSchedule, async () => {
             console.log(`Scheduled port scan triggered for IP: ${ipAddress}`);
             try {
                 const openPorts = await portScan(ipAddress, portRange);
@@ -181,12 +184,43 @@ app.post('/schedule-port-scan', async (req, res) => {
             }
         });
 
+        
+        scheduledScans[scheduledScan._id] = cronJob;
+
         res.json({
             message: `Port scan scheduled for ${ipAddress} every ${interval} minute(s).`,
             scheduleId: scheduledScan._id,
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed to schedule port scan.', details: err.message });
+    }
+});
+
+
+app.post('/stop-scheduled-port-scan', async (req, res) => {
+    const { scheduleId } = req.body;
+
+    console.log(`Received request to stop port scan with scheduleId: ${scheduleId}`);
+
+    if (!scheduleId || !scheduledScans[scheduleId]) {
+        return res.status(400).json({ error: 'Invalid or non-existing schedule ID.' });
+    }
+
+    try {
+        
+        scheduledScans[scheduleId].stop();
+        delete scheduledScans[scheduleId]; 
+
+        
+        await ScheduledScan.findByIdAndUpdate(scheduleId, {
+            $set: { status: 'stopped' },
+        });
+
+        console.log(`Scheduled port scan stopped for schedule ID: ${scheduleId}`);
+        res.json({ message: 'Port scan stopped successfully.' });
+    } catch (err) {
+        console.error('Error stopping port scan:', err);
+        res.status(500).json({ error: 'Failed to stop scheduled port scan.', details: err.message });
     }
 });
 
@@ -308,7 +342,7 @@ app.post('/scan-network', async (req, res) => {
 app.post('/stop-network-scan', (req, res) => {
     stopScan = true;
     console.log('Stop signal received for network scan.');
-    io.emit('network-scan-progress', { progress: 0 }); // Notify frontend to reset progress
+    io.emit('network-scan-progress', { progress: 0 }); 
     res.json({ message: 'Network scan will stop shortly.' });
 });
 
