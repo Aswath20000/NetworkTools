@@ -483,41 +483,51 @@ function App() {
                     </table>
                 )}
             </div>
-
             <div className="card">
-                <h2>Scheduled Scan History</h2>
-                <input
-                    type="text"
-                    value={scheduledScanSearchTerm}
-                    onChange={(e) => setScheduledScanSearchTerm(e.target.value)}
-                    placeholder="Enter IP Address"
-                />
-                <button onClick={handleScheduledScanSearch}>Search Scheduled Scans</button>
-                {scheduledScanResults.length > 0 && (
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>IP Address</th>
-                                <th>Scan History</th>
-                                <th>Last Executed</th>
-                                <th>Created At</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {scheduledScanResults.map((result, index) => (
-                                <tr key={index}>
-                                    <td>{result.ipAddress}</td>
-                                    <td>{JSON.stringify(result.scanHistory)}</td>
-                                    <td>{new Date(result.lastExecuted).toLocaleString()}</td>
-                                    <td>{new Date(result.createdAt).toLocaleString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-        </div></div>
+    <h2>Scheduled Scan History</h2>
+    <input
+        type="text"
+        value={scheduledScanSearchTerm}
+        onChange={(e) => setScheduledScanSearchTerm(e.target.value)}
+        placeholder="Enter IP Address"
+    />
+    <button onClick={handleScheduledScanSearch}>Search Scheduled Scans</button>
+    {scheduledScanResults.length > 0 && (
+        <table>
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Scan History</th>
+                    <th>Last Executed</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {scheduledScanResults.map((result, index) => (
+                    <tr key={index}>
+                        <td>{result.ipAddress}</td>
+                        <td>
+                            {/* Display only openPorts from scanHistory */}
+                            {result.scanHistory && result.scanHistory.length > 0 ? (
+                                result.scanHistory.map((scan, scanIndex) => (
+                                    <span key={scanIndex}>
+                                        {`Open Ports: ${scan.openPorts.join(', ')}`}
+                                        <br />
+                                    </span>
+                                ))
+                            ) : (
+                                'No Scan History'
+                            )}
+                        </td>
+                        <td>{new Date(result.lastExecuted).toLocaleString()}</td>
+                        <td>{new Date(result.createdAt).toLocaleString()}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    )}
+</div>
+</div></div>
     );
 }
 
