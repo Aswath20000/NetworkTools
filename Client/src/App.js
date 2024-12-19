@@ -258,6 +258,7 @@ function App() {
     return (
         <div className="App">
             <h1>Network Tools</h1>
+            <div className='card-cont'>
             <div className="card">
                 <h2>Ping</h2>
                 <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
@@ -351,7 +352,7 @@ function App() {
                 />
                 <button onClick={handleSchedulePortScan}>Schedule Scan</button>
                 <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
-            </div>
+            </div></div>
 
             <div className="card">
                 <h2>Ping History</h2>
