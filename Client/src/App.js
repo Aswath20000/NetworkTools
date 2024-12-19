@@ -85,7 +85,6 @@ function App() {
         }
     };
 
-
     useEffect(() => {
         socket.on('port-scan-progress', (data) => setPortScanProgress(data.progress));
         socket.on('port-scan-completed', (ports) => {
@@ -97,14 +96,23 @@ function App() {
             console.log(`Network scan completed. Active devices: ${devices}`);
             setActiveDevices(devices);
         });
-
+    
+        // Handle socket errors
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            alert('Socket connection error. Please try again.');
+        });
+    
+        // Clean up socket listeners on unmount
         return () => {
             socket.off('port-scan-progress');
             socket.off('port-scan-completed');
             socket.off('network-scan-progress');
             socket.off('network-scan-completed');
+            socket.off('connect_error');
         };
     }, []);
+    
 
     
     const handlePing = async () => {
@@ -255,6 +263,18 @@ function App() {
         }
     };
 
+    const handleStopNetworkScan = async () => {
+        console.log('Stop network scan requested.');
+        try {
+            await axios.post('http://localhost:5000/stop-network-scan');
+            alert('Network scan will stop shortly.');
+            setNetworkScanProgress(0); 
+        } catch (error) {
+            console.error('Error stopping network scan:', error.response?.data?.error || error.message);
+            alert('Error stopping network scan.');
+        }
+    };
+
     return (
         <div className="App">
             <h1>Network Tools</h1>
@@ -297,7 +317,11 @@ function App() {
                 <input type="text" value={subnet} onChange={(e) => setSubnet(e.target.value)} placeholder="Enter Subnet (e.g., 192.168.1.)" />
                 <button onClick={handleNetworkScan}>Start Scan</button>
                 <button onClick={clearNetworkScanResults}>Clear Results</button>
-                <progress value={networkScanProgress} max="100" />
+
+                <button onClick={handleStopNetworkScan}>
+        Stop Scan
+    </button>               
+     <progress value={networkScanProgress} max="100" />
                 <ul>
                     {activeDevices.map((device, index) => (
                         <li key={index}>{device}</li>

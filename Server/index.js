@@ -269,33 +269,49 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
         res.status(500).json({ error: 'Error during VirusTotal scan', details: error.message });
     }
 });
+let stopScan = false;
 
 app.post('/scan-network', async (req, res) => {
     const { subnet } = req.body;
 
     try {
+        stopScan = false;
         console.log(`Network scan started for subnet: ${subnet}`);
         const activeDevices = [];
-        for (let i = 1; i <= 15; i++) {
+        for (let i = 1; i <= 255; i++) {
+            if(stopScan){
+                console.log('network scan stopped');
+                break;
+            }
             const ipAddress = `${subnet}${i}`;
             const result = await ping.promise.probe(ipAddress, { timeout: 1 });
             if (result.alive) {
                 activeDevices.push(ipAddress);
                 console.log(`Active device found: ${ipAddress}`);
             }
-            io.emit('network-scan-progress', { progress: Math.round((i / 15) * 100) });
+            io.emit('network-scan-progress', { progress: Math.round((i / 255) * 100) });
         }
-
+       if(!stopScan){
         const networkScanResult = new NetworkScan({ subnet, activeDevices });
         await networkScanResult.save();
         console.log(`Network scan completed for subnet: ${subnet}. Active Devices: ${activeDevices}`);
         io.emit('network-scan-completed', activeDevices);
         res.json(networkScanResult);
-    } catch (err) {
+    } else{
+        res.json({message:'network scan stopped'});}
+    }catch (err) {
         console.error(`Network scan failed for subnet: ${subnet} - ${err.message}`);
         res.status(500).json({ error: 'Network scan failed', details: err.message });
     }
 });
+
+app.post('/stop-network-scan', (req, res) => {
+    stopScan = true;
+    console.log('Stop signal received for network scan.');
+    io.emit('network-scan-progress', { progress: 0 }); // Notify frontend to reset progress
+    res.json({ message: 'Network scan will stop shortly.' });
+});
+
 
 app.delete('/clear-ping', async (req, res) => {
     await PingResult.deleteMany({});

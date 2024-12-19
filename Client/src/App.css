@@ -74,8 +74,7 @@ h3 {
 
 
 .card input,
-.card button,
-.card progress {
+.card button {
   width: calc(100% - 20px);
   margin: 10px auto 15px;
   padding: 12px;
@@ -86,6 +85,32 @@ h3 {
   display: block;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
+
+.card progress {
+  width: calc(100% - 20px);
+  margin: 10px auto 15px;
+  height: 20px;
+  border-radius: 8px;
+  background-color: #e0e0e0; /* Light gray background for better contrast */
+  overflow: hidden;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.card progress::-webkit-progress-bar {
+  background-color: #e0e0e0; /* Background of the progress bar */
+  border-radius: 8px;
+}
+
+.card progress::-webkit-progress-value {
+  background-color: #2196f3; /* Blue color for progress indicator */
+  border-radius: 8px;
+}
+
+.card progress::-moz-progress-bar {
+  background-color: #2196f3; /* Blue color for progress indicator in Firefox */
+}
+
 
 .card input:focus {
   border-color: #66bb6a;
