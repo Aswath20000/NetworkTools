@@ -354,6 +354,8 @@ function App() {
                 <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
             </div></div>
 
+            <h1>History</h1>
+<div className='card-cont'>
             <div className="card">
                 <h2>Ping History</h2>
                 <input
@@ -515,7 +517,7 @@ function App() {
                 )}
             </div>
 
-        </div>
+        </div></div>
     );
 }
 
