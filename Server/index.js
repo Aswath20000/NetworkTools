@@ -276,14 +276,14 @@ app.post('/scan-network', async (req, res) => {
     try {
         console.log(`Network scan started for subnet: ${subnet}`);
         const activeDevices = [];
-        for (let i = 1; i <= 255; i++) {
+        for (let i = 1; i <= 15; i++) {
             const ipAddress = `${subnet}${i}`;
             const result = await ping.promise.probe(ipAddress, { timeout: 1 });
             if (result.alive) {
                 activeDevices.push(ipAddress);
                 console.log(`Active device found: ${ipAddress}`);
             }
-            io.emit('network-scan-progress', { progress: Math.round((i / 255) * 100) });
+            io.emit('network-scan-progress', { progress: Math.round((i / 15) * 100) });
         }
 
         const networkScanResult = new NetworkScan({ subnet, activeDevices });
