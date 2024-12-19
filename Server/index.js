@@ -79,6 +79,7 @@ const upload = multer({
 
 // Port Scan Logic (Reusable)
 const portScan = async (ipAddress, portRange) => {
+    console.log(`Port scan started for IP: ${ipAddress}, Port Range: ${portRange.start}-${portRange.end}`);
     const openPorts = [];
     const totalPorts = portRange.end - portRange.start + 1;
     let scannedPorts = 0;
@@ -91,6 +92,7 @@ const portScan = async (ipAddress, portRange) => {
             socket.on('connect', () => {
                 openPorts.push(port);
                 scannedPorts++;
+                console.log(`Port ${port} is open.`);
                 const progress = Math.round((scannedPorts / totalPorts) * 100);
                 io.emit('port-scan-progress', { progress });
                 socket.destroy();
@@ -112,7 +114,7 @@ const portScan = async (ipAddress, portRange) => {
             socket.connect(port, ipAddress);
         });
     }
-
+    console.log(`Port scan completed for IP: ${ipAddress}. Open Ports: ${openPorts}`);
     return openPorts;
 };
 
@@ -124,11 +126,14 @@ app.post('/ping', async (req, res) => {
     if (!ipAddress) return res.status(400).json({ error: 'IP Address is required' });
 
     try {
+        console.log(`Ping started for IP: ${ipAddress}`);
         const result = await ping.promise.probe(ipAddress);
         const newResult = new PingResult({ ipAddress, alive: result.alive, time: result.time });
         await newResult.save();
+        console.log(`Ping completed for IP: ${ipAddress} - Alive: ${result.alive}, Time: ${result.time}`);
         res.json(newResult);
     } catch (err) {
+        console.error(`Ping failed for IP: ${ipAddress} - ${err.message}`);
         res.status(500).json({ error: 'Ping failed', details: err.message });
     }
 });
@@ -144,8 +149,10 @@ app.post('/scan-ports', async (req, res) => {
         const result = new PortScan({ ipAddress, openPorts });
         await result.save();
         io.emit('port-scan-completed', openPorts);
+        console.log(`Port scan results saved for IP: ${ipAddress}`);
         res.json(result);
     } catch (err) {
+        console.error(`Port scan failed for IP: ${ipAddress} - ${err.message}`);
         res.status(500).json({ error: 'Port scan failed', details: err.message });
     }
 });
@@ -169,6 +176,7 @@ app.post('/schedule-port-scan', async (req, res) => {
 
         const cronSchedule = `*/${interval} * * * *`;
         cron.schedule(cronSchedule, async () => {
+            console.log(`Scheduled port scan triggered for IP: ${ipAddress}`);
             try {
                 const openPorts = await portScan(ipAddress, portRange);
                 const scanData = { timestamp: new Date(), openPorts };
@@ -177,6 +185,7 @@ app.post('/schedule-port-scan', async (req, res) => {
                     $push: { scanHistory: scanData },
                 });
                 io.emit('scheduled-port-scan-result', { ipAddress, scanData });
+                console.log(`Scheduled port scan completed for IP: ${ipAddress}. Open Ports: ${openPorts}`);
             } catch (err) {
                 console.error(`Error in scheduled port scan:`, err);
             }
@@ -192,9 +201,8 @@ app.post('/schedule-port-scan', async (req, res) => {
 });
 
 // 4. File Upload and VirusTotal Scan
-// 4. File Upload and VirusTotal Scan
 app.post('/scan-file', upload.single('file'), async (req, res) => {
-    const apiKey = process.env.VIRUSTOTAL_API_KEY; // Ensure your API key is set in .env
+    const apiKey = process.env.VIRUSTOTAL_API_KEY;
 
     if (!apiKey) {
         return res.status(500).json({ error: 'VirusTotal API key is not configured.' });
@@ -205,15 +213,15 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
     }
 
     try {
+        console.log(`Malware scan started for file: ${req.file.originalname}`);
         const filePath = req.file.path;
         const fileSize = fs.statSync(filePath).size;
 
-        // Check VirusTotal file size limit (32MB)
         if (fileSize > 32 * 1024 * 1024) {
+            console.error(`File exceeds VirusTotal size limit.`);
             return res.status(400).json({ error: 'File exceeds VirusTotal size limit (32MB).' });
         }
 
-        // Upload file to VirusTotal
         const formData = new FormData();
         formData.append('file', fs.createReadStream(filePath));
         const headers = {
@@ -224,9 +232,8 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
         const uploadResponse = await axios.post('https://www.virustotal.com/api/v3/files', formData, { headers });
         const fileId = uploadResponse.data.data.id;
 
-        // Poll VirusTotal API for scan results
         let retries = 10;
-        const delay = 15000; // 15 seconds between retries
+        const delay = 15000;
         let reportResponse;
 
         while (retries > 0) {
@@ -237,15 +244,15 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
             const status = reportResponse?.data?.data?.attributes?.status;
             if (status === 'completed') break;
 
-            await new Promise((resolve) => setTimeout(resolve, delay)); // Wait before retrying
+            await new Promise((resolve) => setTimeout(resolve, delay));
             retries--;
         }
 
         if (retries === 0) {
+            console.error(`Failed to retrieve scan results for file: ${req.file.originalname}`);
             return res.status(500).json({ error: 'Failed to retrieve scan results.' });
         }
 
-        // Parse VirusTotal results
         const scanResults = reportResponse.data.data.attributes.results || {};
         const maliciousDetails = Object.entries(scanResults)
             .filter(([engine, result]) => result?.category === 'malicious')
@@ -255,10 +262,8 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
                 description: result?.result,
             }));
 
-        // Clean up uploaded file
         fs.unlinkSync(filePath);
 
-        // Save results to MongoDB
         const result = new MalwareScan({
             fileName: req.file.originalname,
             result: {
@@ -268,32 +273,38 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
         });
         await result.save();
 
-        // Send response to the client
+        console.log(`Malware scan completed for file: ${req.file.originalname}. Result: ${result.result.message}`);
         res.json(result.result);
     } catch (error) {
+        console.error(`Malware scan failed for file: ${req.file.originalname} - ${error.message}`);
         res.status(500).json({ error: 'Error during VirusTotal scan', details: error.message });
     }
 });
-
 
 // 5. Network Scan
 app.post('/scan-network', async (req, res) => {
     const { subnet } = req.body;
 
     try {
+        console.log(`Network scan started for subnet: ${subnet}`);
         const activeDevices = [];
-        for (let i = 1; i <= 20; i++) {
+        for (let i = 1; i <= 255; i++) {
             const ipAddress = `${subnet}${i}`;
             const result = await ping.promise.probe(ipAddress, { timeout: 1 });
-            if (result.alive) activeDevices.push(ipAddress);
+            if (result.alive) {
+                activeDevices.push(ipAddress);
+                console.log(`Active device found: ${ipAddress}`);
+            }
             io.emit('network-scan-progress', { progress: Math.round((i / 20) * 100) });
         }
 
         const networkScanResult = new NetworkScan({ subnet, activeDevices });
         await networkScanResult.save();
+        console.log(`Network scan completed for subnet: ${subnet}. Active Devices: ${activeDevices}`);
         io.emit('network-scan-completed', activeDevices);
         res.json(networkScanResult);
     } catch (err) {
+        console.error(`Network scan failed for subnet: ${subnet} - ${err.message}`);
         res.status(500).json({ error: 'Network scan failed', details: err.message });
     }
 });
@@ -301,26 +312,31 @@ app.post('/scan-network', async (req, res) => {
 // Clear Data Endpoints
 app.delete('/clear-ping', async (req, res) => {
     await PingResult.deleteMany({});
+    console.log('All Ping results cleared');
     res.json({ message: 'All Ping results cleared' });
 });
 
 app.delete('/clear-port-scan', async (req, res) => {
     await PortScan.deleteMany({});
+    console.log('All Port Scan results cleared');
     res.json({ message: 'All Port Scan results cleared' });
 });
 
 app.delete('/clear-network-scan', async (req, res) => {
     await NetworkScan.deleteMany({});
+    console.log('All Network Scan results cleared');
     res.json({ message: 'All Network Scan results cleared' });
 });
 
 app.delete('/clear-malware-scan', async (req, res) => {
     await MalwareScan.deleteMany({});
+    console.log('All Malware Scan results cleared');
     res.json({ message: 'All Malware Scan results cleared' });
 });
 
 app.delete('/clear-scheduled-scan', async (req, res) => {
     await ScheduledScan.deleteMany({});
+    console.log('All Scheduled Scans cleared');
     res.json({ message: 'All Scheduled Scans cleared' });
 });
 
