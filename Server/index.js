@@ -340,6 +340,67 @@ app.delete('/clear-scheduled-scan', async (req, res) => {
     res.json({ message: 'All Scheduled Scans cleared' });
 });
 
+// Search Ping Results
+app.get('/search-ping', async (req, res) => {
+    const { ipAddress } = req.query;
+    try {
+        const results = await PingResult.find({ ipAddress });
+        res.json(results);
+    } catch (err) {
+        console.error(`Error fetching Ping results for IP: ${ipAddress} - ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch Ping results', details: err.message });
+    }
+});
+
+// Search Port Scan Results
+app.get('/search-port-scan', async (req, res) => {
+    const { ipAddress } = req.query;
+    try {
+        const results = await PortScan.find({ ipAddress });
+        res.json(results);
+    } catch (err) {
+        console.error(`Error fetching Port Scan results for IP: ${ipAddress} - ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch Port Scan results', details: err.message });
+    }
+});
+
+// Search Network Scan Results
+app.get('/search-network-scan', async (req, res) => {
+    const { subnet } = req.query;
+    try {
+        const results = await NetworkScan.find({ subnet: new RegExp(`^${subnet}`) });
+        res.json(results);
+    } catch (err) {
+        console.error(`Error fetching Network Scan results for subnet: ${subnet} - ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch Network Scan results', details: err.message });
+    }
+});
+
+// Search Malware Scan Results by File Name
+app.get('/search-malware-scan', async (req, res) => {
+    const { fileName } = req.query;
+    try {
+        const results = await MalwareScan.find({ fileName: new RegExp(fileName, 'i') });
+        res.json(results);
+    } catch (err) {
+        console.error(`Error fetching Malware Scan results for file: ${fileName} - ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch Malware Scan results', details: err.message });
+    }
+});
+
+// Search Scheduled Port Scan Results
+app.get('/search-scheduled-scan', async (req, res) => {
+    const { ipAddress } = req.query;
+    try {
+        const results = await ScheduledScan.find({ ipAddress });
+        res.json(results);
+    } catch (err) {
+        console.error(`Error fetching Scheduled Scan results for IP: ${ipAddress} - ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch Scheduled Scan results', details: err.message });
+    }
+});
+
+
 // Real-time connection
 io.on('connection', (socket) => {
     console.log('Client connected to Socket.IO');

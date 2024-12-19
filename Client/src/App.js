@@ -27,6 +27,83 @@ function App() {
 
     // State for Port Scan Scheduling
     const [interval, setInterval] = useState(0);
+    const [pingSearchTerm, setPingSearchTerm] = useState('');
+    const [pingResults, setPingResults] = useState([]);
+
+    // State variables for Port Scan Search
+    const [portScanSearchTerm, setPortScanSearchTerm] = useState('');
+    const [portScanResults, setPortScanResults] = useState([]);
+
+    // State variables for Network Scan Search
+    const [networkScanSearchTerm, setNetworkScanSearchTerm] = useState('');
+    const [networkScanResults, setNetworkScanResults] = useState([]);
+
+    // State variables for Malware Scan Search
+    const [malwareSearchTerm, setMalwareSearchTerm] = useState('');
+    const [malwareResults, setMalwareResults] = useState([]);
+
+    // State variables for Scheduled Port Scan Search
+    const [scheduledScanSearchTerm, setScheduledScanSearchTerm] = useState('');
+    const [scheduledScanResults, setScheduledScanResults] = useState([]);
+
+
+    // Search Functionality
+    const handlePingSearch = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/search-ping', {
+                params: { ipAddress: pingSearchTerm },
+            });
+            setPingResults(response.data);
+        } catch (error) {
+            alert('Error fetching Ping results: ' + error.message);
+        }
+    };
+
+    const handlePortScanSearch = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/search-port-scan', {
+                params: { ipAddress: portScanSearchTerm },
+            });
+            setPortScanResults(response.data);
+        } catch (error) {
+            alert('Error fetching Port Scan results: ' + error.message);
+        }
+    };
+
+    const handleNetworkScanSearch = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/search-network-scan', {
+                params: { subnet: networkScanSearchTerm },
+            });
+            setNetworkScanResults(response.data);
+        } catch (error) {
+            alert('Error fetching Network Scan results: ' + error.message);
+        }
+    };
+
+    const handleMalwareSearch = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/search-malware-scan', {
+                params: { fileName: malwareSearchTerm },
+            });
+            setMalwareResults(response.data);
+        } catch (error) {
+            alert('Error fetching Malware Scan results: ' + error.message);
+        }
+    };
+
+    const handleScheduledScanSearch = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/search-scheduled-scan', {
+                params: { ipAddress: scheduledScanSearchTerm },
+            });
+            setScheduledScanResults(response.data);
+        } catch (error) {
+            alert('Error fetching Scheduled Scan results: ' + error.message);
+        }
+    };
+
+
 
     // Socket.IO setup for real-time updates
     useEffect(() => {
@@ -303,6 +380,171 @@ function App() {
                 <button onClick={handleSchedulePortScan}>Schedule Scan</button>
                 <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
             </div>
+
+            {/* Ping Search */}
+            <div className="card">
+                <h2>Ping History</h2>
+                <input
+                    type="text"
+                    value={pingSearchTerm}
+                    onChange={(e) => setPingSearchTerm(e.target.value)}
+                    placeholder="Enter IP Address"
+                />
+                <button onClick={handlePingSearch}>Search Ping</button>
+                {pingResults.length > 0 && (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Alive</th>
+                                <th>Time</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pingResults.map((result, index) => (
+                                <tr key={index}>
+                                    <td>{result.ipAddress}</td>
+                                    <td>{result.alive ? 'Yes' : 'No'}</td>
+                                    <td>{result.time}</td>
+                                    <td>{new Date(result.timestamp).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {/* Port Scan Search */}
+            <div className="card">
+                <h2>Port Scan History</h2>
+                <input
+                    type="text"
+                    value={portScanSearchTerm}
+                    onChange={(e) => setPortScanSearchTerm(e.target.value)}
+                    placeholder="Enter IP Address"
+                />
+                <button onClick={handlePortScanSearch}>Search Port Scan</button>
+                {portScanResults.length > 0 && (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Open Ports</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {portScanResults.map((result, index) => (
+                                <tr key={index}>
+                                    <td>{result.ipAddress}</td>
+                                    <td>{result.openPorts?.join(', ') || 'None'}</td>
+                                    <td>{new Date(result.timestamp).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {/* Network Scan Search */}
+            <div className="card">
+                <h2>Network Scan History</h2>
+                <input
+                    type="text"
+                    value={networkScanSearchTerm}
+                    onChange={(e) => setNetworkScanSearchTerm(e.target.value)}
+                    placeholder="Enter Subnet (e.g., 192.168.1.)"
+                />
+                <button onClick={handleNetworkScanSearch}>Search Network Scan</button>
+                {networkScanResults.length > 0 && (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subnet</th>
+                                <th>Active Devices</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {networkScanResults.map((result, index) => (
+                                <tr key={index}>
+                                    <td>{result.subnet}</td>
+                                    <td>{result.activeDevices?.join(', ') || 'None'}</td>
+                                    <td>{new Date(result.timestamp).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {/* Malware Scan Search */}
+            <div className="card">
+                <h2>Malware Scan History</h2>
+                <input
+                    type="text"
+                    value={malwareSearchTerm}
+                    onChange={(e) => setMalwareSearchTerm(e.target.value)}
+                    placeholder="Enter File Name (e.g., file.txt)"
+                />
+                <button onClick={handleMalwareSearch}>Search Malware Scan</button>
+                {malwareResults.length > 0 && (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Result</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {malwareResults.map((result, index) => (
+                                <tr key={index}>
+                                    <td>{result.fileName}</td>
+                                    <td>{result.result.message}</td>
+                                    <td>{new Date(result.timestamp).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            {/* Scheduled Scan Search */}
+            <div className="card">
+                <h2>Scheduled Scan History</h2>
+                <input
+                    type="text"
+                    value={scheduledScanSearchTerm}
+                    onChange={(e) => setScheduledScanSearchTerm(e.target.value)}
+                    placeholder="Enter IP Address"
+                />
+                <button onClick={handleScheduledScanSearch}>Search Scheduled Scans</button>
+                {scheduledScanResults.length > 0 && (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Scan History</th>
+                                <th>Last Executed</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {scheduledScanResults.map((result, index) => (
+                                <tr key={index}>
+                                    <td>{result.ipAddress}</td>
+                                    <td>{JSON.stringify(result.scanHistory)}</td>
+                                    <td>{new Date(result.lastExecuted).toLocaleString()}</td>
+                                    <td>{new Date(result.createdAt).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
         </div>
     );
 }
