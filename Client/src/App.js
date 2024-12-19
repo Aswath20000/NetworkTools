@@ -483,6 +483,7 @@ function App() {
                     </table>
                 )}
             </div>
+
             <div className="card">
     <h2>Scheduled Scan History</h2>
     <input
