@@ -17,18 +17,16 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, { cors: { origin: '*' } });
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// MongoDB Connection
+
 mongoose.connect('mongodb://localhost:27017/networkToolData', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// MongoDB Schemas
 const PingResult = mongoose.model('PingResult', new mongoose.Schema({
     ipAddress: String,
     alive: Boolean,
@@ -71,13 +69,11 @@ const ScheduledScan = mongoose.model('ScheduledScan', new mongoose.Schema({
     ],
 }));
 
-// Multer for File Uploads
 const upload = multer({
     dest: 'uploads/',
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
+    limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-// Port Scan Logic (Reusable)
 const portScan = async (ipAddress, portRange) => {
     console.log(`Port scan started for IP: ${ipAddress}, Port Range: ${portRange.start}-${portRange.end}`);
     const openPorts = [];
@@ -117,9 +113,6 @@ const portScan = async (ipAddress, portRange) => {
     console.log(`Port scan completed for IP: ${ipAddress}. Open Ports: ${openPorts}`);
     return openPorts;
 };
-
-// Routes
-// 1. Ping IP
 app.post('/ping', async (req, res) => {
     const { ipAddress } = req.body;
 
@@ -137,8 +130,6 @@ app.post('/ping', async (req, res) => {
         res.status(500).json({ error: 'Ping failed', details: err.message });
     }
 });
-
-// 2. Port Scan
 app.post('/scan-ports', async (req, res) => {
     const { ipAddress, portRange } = req.body;
 
@@ -157,7 +148,6 @@ app.post('/scan-ports', async (req, res) => {
     }
 });
 
-// 3. Scheduled Port Scan
 app.post('/schedule-port-scan', async (req, res) => {
     const { ipAddress, interval, portRange } = req.body;
 
@@ -200,7 +190,6 @@ app.post('/schedule-port-scan', async (req, res) => {
     }
 });
 
-// 4. File Upload and VirusTotal Scan
 app.post('/scan-file', upload.single('file'), async (req, res) => {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
 
@@ -281,7 +270,6 @@ app.post('/scan-file', upload.single('file'), async (req, res) => {
     }
 });
 
-// 5. Network Scan
 app.post('/scan-network', async (req, res) => {
     const { subnet } = req.body;
 
@@ -295,7 +283,7 @@ app.post('/scan-network', async (req, res) => {
                 activeDevices.push(ipAddress);
                 console.log(`Active device found: ${ipAddress}`);
             }
-            io.emit('network-scan-progress', { progress: Math.round((i / 20) * 100) });
+            io.emit('network-scan-progress', { progress: Math.round((i / 255) * 100) });
         }
 
         const networkScanResult = new NetworkScan({ subnet, activeDevices });
@@ -309,7 +297,6 @@ app.post('/scan-network', async (req, res) => {
     }
 });
 
-// Clear Data Endpoints
 app.delete('/clear-ping', async (req, res) => {
     await PingResult.deleteMany({});
     console.log('All Ping results cleared');
@@ -340,7 +327,6 @@ app.delete('/clear-scheduled-scan', async (req, res) => {
     res.json({ message: 'All Scheduled Scans cleared' });
 });
 
-// Search Ping Results
 app.get('/search-ping', async (req, res) => {
     const { ipAddress } = req.query;
     try {
@@ -352,7 +338,6 @@ app.get('/search-ping', async (req, res) => {
     }
 });
 
-// Search Port Scan Results
 app.get('/search-port-scan', async (req, res) => {
     const { ipAddress } = req.query;
     try {
@@ -363,8 +348,6 @@ app.get('/search-port-scan', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch Port Scan results', details: err.message });
     }
 });
-
-// Search Network Scan Results
 app.get('/search-network-scan', async (req, res) => {
     const { subnet } = req.query;
     try {
@@ -376,7 +359,6 @@ app.get('/search-network-scan', async (req, res) => {
     }
 });
 
-// Search Malware Scan Results by File Name
 app.get('/search-malware-scan', async (req, res) => {
     const { fileName } = req.query;
     try {
@@ -388,7 +370,6 @@ app.get('/search-malware-scan', async (req, res) => {
     }
 });
 
-// Search Scheduled Port Scan Results
 app.get('/search-scheduled-scan', async (req, res) => {
     const { ipAddress } = req.query;
     try {
@@ -400,8 +381,6 @@ app.get('/search-scheduled-scan', async (req, res) => {
     }
 });
 
-
-// Real-time connection
 io.on('connection', (socket) => {
     console.log('Client connected to Socket.IO');
 });

@@ -3,51 +3,33 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const socket = io('http://localhost:5000'); // Connect to Socket.IO server
+const socket = io('http://localhost:5000'); 
 
 function App() {
-    // State variables for Ping
+    
     const [ipAddress, setIpAddress] = useState('');
     const [pingResult, setPingResult] = useState(null);
-
-    // State variables for Port Scan
     const [portRange, setPortRange] = useState({ start: 1, end: 100 });
     const [portScanProgress, setPortScanProgress] = useState(0);
     const [portScanResult, setPortScanResult] = useState([]);
-
-    // State variables for Network Scan
     const [subnet, setSubnet] = useState('');
     const [networkScanProgress, setNetworkScanProgress] = useState(0);
     const [activeDevices, setActiveDevices] = useState([]);
-
-    // State variables for File Upload
     const [file, setFile] = useState(null);
     const [fileScanResult, setFileScanResult] = useState(null);
     const [fileUploadProgress, setFileUploadProgress] = useState(0);
-
-    // State for Port Scan Scheduling
     const [interval, setInterval] = useState(0);
     const [pingSearchTerm, setPingSearchTerm] = useState('');
     const [pingResults, setPingResults] = useState([]);
-
-    // State variables for Port Scan Search
     const [portScanSearchTerm, setPortScanSearchTerm] = useState('');
     const [portScanResults, setPortScanResults] = useState([]);
-
-    // State variables for Network Scan Search
     const [networkScanSearchTerm, setNetworkScanSearchTerm] = useState('');
     const [networkScanResults, setNetworkScanResults] = useState([]);
-
-    // State variables for Malware Scan Search
     const [malwareSearchTerm, setMalwareSearchTerm] = useState('');
     const [malwareResults, setMalwareResults] = useState([]);
-
-    // State variables for Scheduled Port Scan Search
     const [scheduledScanSearchTerm, setScheduledScanSearchTerm] = useState('');
     const [scheduledScanResults, setScheduledScanResults] = useState([]);
 
-
-    // Search Functionality
     const handlePingSearch = async () => {
         try {
             const response = await axios.get('http://localhost:5000/search-ping', {
@@ -104,8 +86,6 @@ function App() {
     };
 
 
-
-    // Socket.IO setup for real-time updates
     useEffect(() => {
         socket.on('port-scan-progress', (data) => setPortScanProgress(data.progress));
         socket.on('port-scan-completed', (ports) => {
@@ -126,7 +106,7 @@ function App() {
         };
     }, []);
 
-    // Ping Functions
+    
     const handlePing = async () => {
         console.log('Ping started...');
         try {
@@ -152,7 +132,6 @@ function App() {
         }
     };
 
-    // Port Scan Functions
     const handlePortScan = async () => {
         console.log('Port scan started...');
         try {
@@ -179,7 +158,6 @@ function App() {
         }
     };
 
-    // Network Scan Functions
     const handleNetworkScan = async () => {
         console.log('Network scan started...');
         try {
@@ -206,7 +184,6 @@ function App() {
         }
     };
 
-    // Malware Scan Functions
     const handleFileUpload = async () => {
         console.log('Malware scan started...');
         if (!file) return alert('Please select a file first.');
@@ -245,8 +222,6 @@ function App() {
             alert('Error clearing malware scan results.');
         }
     };
-
-    // Scheduled Port Scan Functions
     const handleSchedulePortScan = async () => {
         console.log('Scheduling port scan...');
         try {
@@ -283,8 +258,6 @@ function App() {
     return (
         <div className="App">
             <h1>Network Tools</h1>
-
-            {/* Ping Functionality */}
             <div className="card">
                 <h2>Ping</h2>
                 <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
@@ -293,7 +266,6 @@ function App() {
                 {pingResult && <pre>{JSON.stringify(pingResult, null, 2)}</pre>}
             </div>
 
-            {/* Port Scan Functionality */}
             <div className="card">
                 <h2>Port Scan</h2>
                 <input
@@ -318,7 +290,7 @@ function App() {
                 </ul>
             </div>
 
-            {/* Network Scan Functionality */}
+            
             <div className="card">
                 <h2>Network Scan</h2>
                 <input type="text" value={subnet} onChange={(e) => setSubnet(e.target.value)} placeholder="Enter Subnet (e.g., 192.168.1.)" />
@@ -332,7 +304,7 @@ function App() {
                 </ul>
             </div>
 
-            {/* Malware Scan */}
+            
             <div className="card">
                 <h2>Malware Scan</h2>
                 <input type="file" onChange={(e) => setFile(e.target.files[0])} />
@@ -355,7 +327,7 @@ function App() {
                 )}
             </div>
 
-            {/* Scheduled Port Scan */}
+            
             <div className="card">
                 <h2>Scheduled Port Scan</h2>
                 <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} placeholder="Enter IP Address" />
@@ -381,7 +353,6 @@ function App() {
                 <button onClick={clearScheduledScanResults}>Clear Scheduled Results</button>
             </div>
 
-            {/* Ping Search */}
             <div className="card">
                 <h2>Ping History</h2>
                 <input
@@ -415,7 +386,7 @@ function App() {
                 )}
             </div>
 
-            {/* Port Scan Search */}
+            
             <div className="card">
                 <h2>Port Scan History</h2>
                 <input
@@ -447,7 +418,7 @@ function App() {
                 )}
             </div>
 
-            {/* Network Scan Search */}
+            
             <div className="card">
                 <h2>Network Scan History</h2>
                 <input
@@ -479,7 +450,6 @@ function App() {
                 )}
             </div>
 
-            {/* Malware Scan Search */}
             <div className="card">
                 <h2>Malware Scan History</h2>
                 <input
@@ -511,7 +481,6 @@ function App() {
                 )}
             </div>
 
-            {/* Scheduled Scan Search */}
             <div className="card">
                 <h2>Scheduled Scan History</h2>
                 <input
